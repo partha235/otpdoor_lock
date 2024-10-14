@@ -1,0 +1,133 @@
+from utime import sleep_ms, sleep
+import network 
+from machine import Pin, Timer
+import gc 
+import urandom as r
+from umqtt.simple import MQTTClient
+try:
+    from bps_cre import *     
+except:
+    pass
+
+
+gc.collect()
+
+# Set up the LED and IR sensor pins
+led = Pin(2, Pin.OUT)
+ir_s = Pin(4, Pin.IN)
+OTP = range(1000, 9999)
+
+# Define row and column pins
+row_list = [12, 14, 27, 26]  
+col_list = [17, 18, 5]
+otp_S = []  # Stores the digits entered via the keypad
+x1_otp = None  # Stores the generated OTP
+
+# Initialize row pins as outputs and set to high
+for x in range(0, 4):
+    row_list[x] = Pin(row_list[x], Pin.OUT)
+    row_list[x].value(1)
+
+# Initialize column pins as inputs with pull-up resistors
+for x in range(0, 3):
+    col_list[x] = Pin(col_list[x], Pin.IN, Pin.PULL_UP)
+
+# Define keypad layout
+key_list = [
+    ["1", "2", "3"],
+    ["4", "5", "6"],
+    ["7", "8", "9"],
+    ["*", "0", "#"]
+]
+
+# Function to scan the keypad
+def keypad(col, row):
+    for r in row:
+        r.value(0)
+        result = [col[0].value(), col[1].value(), col[2].value()]
+        if min(result) == 0:
+            key = key_list[int(row.index(r))][int(result.index(0))]
+            r.value(1)
+            return key
+        r.value(1)
+
+# MQTT setup
+mqtt_client_id = bytes('bps', 'utf-8')
+ssid=bps_ssid     # your network/hotspot/ssid name.
+passw=bps_passw    # your network/hotspot/ssid password.
+
+ADAFRUIT_IO_URL = 'io.adafruit.com' 
+ADAFRUIT_IO_USERNAME = "bps235"
+ADAFRUIT_IO_KEY = ADAFRUIT_AIO_KEY
+
+OTP_FEED_ID = 'otp'
+
+sta = network.WLAN(network.STA_IF)  # station interface.
+sta.active(True)
+sta.connect(ssid, passw)  # connecting to network.
+sleep_ms(200)
+
+while not sta.isconnected():
+    pass
+
+if sta.isconnected():
+    print("Connection status: ", sta.isconnected())
+
+client = MQTTClient(client_id=mqtt_client_id, 
+                    server=ADAFRUIT_IO_URL, 
+                    user=ADAFRUIT_IO_USERNAME, 
+                    password=ADAFRUIT_IO_KEY,
+                    ssl=False)
+
+try:            
+    client.connect()
+    print("Client connected")
+except Exception as e:
+    print(f'Could not connect to MQTT server: {e}')
+
+otp_feed = bytes(f'{ADAFRUIT_IO_USERNAME}/feeds/{OTP_FEED_ID}', 'utf-8')   
+
+# IR sensor and OTP logic
+def sens_data():
+    global x1_otp
+
+    ir_v = ir_s.value()
+
+    if not ir_v:  # If IR sensor detects something
+        x_otp = r.choice(OTP)  # Generate a random OTP
+        x1_otp = str(x_otp)  # Store OTP as string for comparison
+        print("Generated OTP: ", x_otp)
+        client.publish(otp_feed, bytes(str(x_otp), 'utf-8'), qos=0)
+        print('OTP sent')
+
+        # Clear the keypad buffer
+        otp_S.clear()
+        sleep(0.3)
+
+        # Read the OTP from the keypad
+        while len(otp_S) < 4:
+            key = keypad(col_list, row_list)
+            if key is not None:
+                print("Key pressed: " + key)
+                otp_S.append(key)
+                sleep(0.3)  # Prevent double keypress registration
+
+        otp_str = ''.join(otp_S)  # Convert the list to a string
+        print("Entered OTP: " + otp_str)
+
+        # Compare entered OTP with generated OTP
+        if x1_otp == otp_str:
+            print("OTP matches! Door opened.")
+            led.value(0)  # Turn on the LED (door opens)
+            sleep(3)
+            led.value(1)  # Turn off the LED (door closes)
+        else:
+            print("Incorrect OTP! Door remains closed.")
+        
+        # Clear the OTP buffer after comparison
+        otp_S.clear()
+        sleep(0.3)
+
+# Call the OTP logic
+while True:
+    sens_data()

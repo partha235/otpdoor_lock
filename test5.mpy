@@ -1,0 +1,77 @@
+# adafruit-io program.
+
+from umqtt.robust import MQTTClient
+from utime import sleep_ms,sleep
+import network 
+from machine import Pin, Timer
+import sys
+import gc 
+import urandom as r
+try:
+    from bps_cre import *     
+except:
+    pass
+
+gc.collect()
+
+OTP=range(1000,9999)
+x=Pin(2,Pin.OUT)
+
+mqtt_client_id      = bytes('bps', 'utf-8')
+
+ssid=bps_ssid     # your network/hotspot/ssid name.
+passw=bps_passw    # your network/hotspot/ssid password.
+
+ADAFRUIT_IO_URL     = 'io.adafruit.com' 
+ADAFRUIT_IO_USERNAME = "bps235"
+ADAFRUIT_IO_KEY = ADAFRUIT_AIO_KEY
+
+
+OTP_FEED_ID      = 'otp'
+
+
+sta= network.WLAN(network.STA_IF) # station interface.
+sta.active(True)
+sta.connect(ssid,passw)  # connecting to network.
+sleep_ms(200)
+
+while sta.isconnected()==False:
+    pass
+
+if sta.isconnected():
+    print("connection status : ", sta.isconnected())
+
+client = MQTTClient(client_id=mqtt_client_id, 
+                    server=ADAFRUIT_IO_URL, 
+                    user=ADAFRUIT_IO_USERNAME, 
+                    password=ADAFRUIT_IO_KEY,
+                    ssl=False)
+
+
+try:            
+    client.connect()
+    print("client connected :")
+except Exception as e:
+    print('could not connect to MQTT server {}{}'.format(type(e).__name__, e))
+    print(mqtt_client_id)
+    # sys.exit()
+
+otp_feed = bytes('{:s}/feeds/{:s}'.format(ADAFRUIT_IO_USERNAME, OTP_FEED_ID), 'utf-8')   
+
+
+
+
+def sens_data(data):
+    x_otp=r.choice(OTP)
+    print("x_otp = ",x_otp)
+    client.publish(otp_feed,    
+                  bytes(str(x_otp), 'utf-8'),   # Publishing Temp feed to adafruit.io
+                  qos=0)
+    print('Msg sent')
+
+
+timer = Timer(0)
+timer.init(period=5000, mode=Timer.PERIODIC, callback = sens_data)
+
+# code is working  updates for every 5 seconds.
+

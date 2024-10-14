@@ -1,0 +1,48 @@
+
+import wifi
+import urequests as requests
+from time import sleep
+
+wifi.wactive()  # WLAN aktivieren
+
+global requestURL
+global OFFSET
+OFFSET = 0
+botToken = "7722328007:AAHxhD-3X_Hs4gn2M5ZGTX1ryO7GjYWZLe4"
+requestURL = 'https://api.telegram.org/botYOUR HTTP API/getUpdates'
+sendURL = 'https://api.telegram.org/botYOUR HTTP API/sendMessage'
+
+def extract_result (dict):
+    result_array = dict['result']
+    
+    if result_array == []:
+        return False
+    else:
+        result_dic = result_array[0]
+        return result_dic
+    
+def send_message (chatId, message):
+    requests.post(sendURL + "?chat_id=" + str(chatId) + "&text=" + message)
+    print("gesendet")
+    
+def update (url):
+ global OFFSET
+ try:  
+     #update_raw = requests.get(requestURL)
+  update_raw = requests.get(url + "?offset=" + str(OFFSET))
+  update = update_raw.json()
+  final_result = extract_result(update)
+  #print(final_result['message']['text'])
+  if final_result != False:
+   OFFSET = final_result['update_id'] + 1
+   chat_id = final_result['message']['chat']['id']
+   text = final_result['message']['text']
+   send_message(chat_id, text)
+  #except requests.exceptions.ConnectionError:
+       #pass
+ finally:
+  print("final")
+      
+while True:
+ update(requestURL)
+ sleep(2)

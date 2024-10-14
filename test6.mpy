@@ -1,0 +1,54 @@
+from machine import Pin
+import utime
+ 
+# Define row and column pins
+row_list = [12, 14, 27, 26]  
+col_list = [17, 18, 5]
+otp_S = []
+
+# Initialize row pins as outputs and set to high
+for x in range(0, 4):
+    row_list[x] = Pin(row_list[x], Pin.OUT)
+    row_list[x].value(1)
+   
+# Initialize column pins as inputs with pull-up resistors
+for x in range(0, 3):
+    col_list[x] = Pin(col_list[x], Pin.IN, Pin.PULL_UP)
+
+# Define keypad layout
+key_list = [
+    ["1", "2", "3"],
+    ["4", "5", "6"],
+    ["7", "8", "9"],
+    ["*", "0", "#"]
+]
+
+# Function to scan the keypad
+def keypad(col, row):
+    for r in row:
+        r.value(0)
+        result = [col[0].value(), col[1].value(), col[2].value()]
+        if min(result) == 0:
+            key = key_list[int(row.index(r))][int(result.index(0))]
+            r.value(1)
+            return key
+        r.value(1)
+
+# Main loop to capture OTP
+while True:
+    key = keypad(col_list, row_list)
+    if key is not None:
+        print("Key: " + key)
+        otp_S.append(key)
+
+        # Clear OTP if it gets too long
+        if len(otp_S) >= 5:
+            otp_S.clear()
+
+        # Process the OTP when 4 digits are entered
+        if len(otp_S) == 4:
+            otp_str = "{}{}{}{}".format(otp_S[0], otp_S[1], otp_S[2], otp_S[3])
+            print("OTP: " + otp_str)
+            otp_S.clear()  # Clear OTP after printing
+
+        utime.sleep(0.3)  # Debounce delay

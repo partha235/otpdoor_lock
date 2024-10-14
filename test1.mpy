@@ -1,0 +1,12 @@
+# this program generate four digits otp
+from machine import Pin
+import urandom as r
+from utime import sleep_ms
+
+OTP=range(1000,9999)
+
+
+
+for i in range(20):
+    x_otp=r.choice(OTP)
+    print("x_otp = ",x_otp)
