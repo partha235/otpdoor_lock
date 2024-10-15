@@ -8,7 +8,7 @@ wifi.wactive()  # WLAN aktivieren
 global requestURL
 global OFFSET
 OFFSET = 0
-botToken = "7722328007:AAHxhD-3X_Hs4gn2M5ZGTX1ryO7GjYWZLe4"
+botToken = "*******************************"
 requestURL = 'https://api.telegram.org/botYOUR HTTP API/getUpdates'
 sendURL = 'https://api.telegram.org/botYOUR HTTP API/sendMessage'
 
