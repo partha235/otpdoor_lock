@@ -1,0 +1,2 @@
+# OTP Door Lock
+This repo made for door lock open system based on OTP which has been streamed in [adafruit-io](https://io.adafruit.com/) site. When the IR sensor detects a motion it sends OTP to adafruit feed. While entering the OTP in 4x3 matrix keypad the lock opens.
